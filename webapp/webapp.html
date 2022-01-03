@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="is">
+
+<head>
+    <meta charset="utf-8" />
+    <title>webapp</title>
+    <link rel="stylesheet" type="text/css" href="css/webapp.css" />
+</head>
+
+<body oncontextmenu="return false;">
+    <div>
+        <div>
+            <span id="connectionLight">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <button id="connectionUrl">Set IP</button>
+            <button id="requestData">Request Data</button>
+            <button id="btnSetSampleTime">Sample Time (us)</button>
+            <input type="text" id="inpSampleTime" name="samples" value="20000">
+            <button id="btnSetSampleFreq">Sample Frequency (Hz)</button>
+            <input type="text" id="inpSampleFreq" name="samples" value="50000">
+            <button id="btnTogglePoints">Toggle Points</button>
+        </div>
+    </div>
+    <div>
+        <div style="height: 800px">
+            <canvas id="adAllChart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad0Chart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad3Chart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad4Chart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad5Chart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad6Chart"></canvas>
+        </div>
+        <div style="height: 240px">
+            <canvas id="ad7Chart"></canvas>
+        </div>
+    </div>
+    <!--<link rel="stylesheet" type="text/css" href="css/webapp.css" />-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="js/3rd/jquery.js"></script>
+    <script type="text/javascript" src="js/wsclient.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+    <script type="text/javascript" src="js/graph.js"></script>
+</body>
+
+</html>
