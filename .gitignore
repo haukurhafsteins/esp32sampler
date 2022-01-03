@@ -3,3 +3,4 @@ main/rapidjson/
 .vscode/
 .devcontainer/
 debug.log
+sdkconfig.old

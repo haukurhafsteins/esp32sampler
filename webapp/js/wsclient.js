@@ -4,7 +4,7 @@
 var WsClient = function () {
     var ui = {};
     var ws = null;
-    var connectionCallback = null;
+    var connectionCallback = new Map();
     var listMemoryCallback = null;
     var varToElement = {};
     var peerUrl = "";
@@ -23,15 +23,14 @@ var WsClient = function () {
      * and false for disconnected.
      */
     function init(callback) {
+        connectionCallback.set(defaultConCallback, defaultConCallback);
         if (isFunction(callback))
-            connectionCallback = callback;
-        else
-            connectionCallback = defaultConCallback;
+            connectionCallback.set(callback, callback);
         ui.elOnInit = document.getElementsByClassName("mapElementToVar");
         ui.elButton = []; //document.getElementsByTagName("button");
         ui.elInput = []; //document.getElementsByTagName("input");
         bindUiActions();
-        connectionCallback(isConnected());
+        sendConnectionStatus(isConnected());
         setStatus("Initialized - Disconnected");
     }
 
@@ -150,6 +149,13 @@ var WsClient = function () {
     function close() {
         if (ws != null) ws.close();
     }
+
+    /**
+     * Close connection.
+     */
+     function registerConnectionCallback(callback) {
+        connectionCallback.set(callback, callback);
+    }
     ///@}
 
 
@@ -162,6 +168,13 @@ var WsClient = function () {
      * Private Members
      */
     ///@{
+
+    function sendConnectionStatus(status) {
+        for (let cb of connectionCallback.values()){
+            cb(status);
+        }
+    }
+
     function reqVar(memory) {
         if (isConnected()) {
             var msg = { cmd: "request", data: memory };
@@ -191,7 +204,7 @@ var WsClient = function () {
             varToElement[id] = el;
         }
 
-        connectionCallback(isConnected());
+        sendConnectionStatus(isConnected());
 
         for (key in varToElement) {
             subscribeVar(key);
@@ -200,7 +213,7 @@ var WsClient = function () {
 
     function onClose(evt) {
         setStatus("Disconnected (" + evt.code + "): " + evt.reason);
-        connectionCallback(isConnected());
+        sendConnectionStatus(isConnected());
         var id = setInterval(function () {
             createSocket(peerUrl);
             clearInterval(id);
@@ -353,7 +366,8 @@ var WsClient = function () {
         unsubscribeVariable: unsubscribeVariable,
         publishVariable: publishVariable,
         requestVariable: requestVariable,
-        listVariables: listVariables
+        listVariables: listVariables,
+        registerConnectionCallback: registerConnectionCallback
     }
 }();
 

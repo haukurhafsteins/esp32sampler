@@ -3,7 +3,6 @@ var DataPlotter = function () {
     var config = [];
     var graphData = [];
     var time_per_sample_ms = 0.04;
-    var sample_freq = 25000;
     var show_points = false;
     var ui = {};
     var color = ["#CCCCCC", "#888888", "#FFFF00", "#0000FF", "#00FF00", "#00FFFF", "#FF0000", "#FF00FF"];
@@ -46,8 +45,18 @@ var DataPlotter = function () {
         WsClient.subscribeVariable("ad1Data.5", ad15Callback);
         WsClient.subscribeVariable("ad1Data.6", ad16Callback);
         WsClient.subscribeVariable("ad1Data.7", ad17Callback);
+
+        WsClient.registerConnectionCallback(connectionCallback);
     }
 
+    function connectionCallback(value) {
+        if (value) {
+            var sample_time_us = Number(ui.inpSampleTime.val());
+            WsClient.publishVariable("sampleTime", sample_time_us);
+            var sample_freq = Number(ui.inpSampleFreq.val());
+            WsClient.publishVariable("sampleFreq", sample_freq);
+        }
+    }
     function GraphData(datasets) {//label, data, color) {
         this.labels = [];
         this.datasets = datasets;
@@ -154,7 +163,7 @@ var DataPlotter = function () {
         });
         ui.btnTogglePoints.click(function () {
             show_points = !show_points;
-            var r = show_points ? 2:0;
+            var r = show_points ? 2 : 0;
             charts[0].options.elements.point.radius = r;
             charts[3].options.elements.point.radius = r;
             charts[4].options.elements.point.radius = r;
