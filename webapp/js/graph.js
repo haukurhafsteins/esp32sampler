@@ -2,7 +2,7 @@ var DataPlotter = function () {
     var charts = [];
     var config = [];
     var graphData = [];
-    var time_per_sample_ms = 0.04;
+    var time_per_sample_us = 0.04;
     var show_points = false;
     var ui = {};
     var color = ["#CCCCCC", "#888888", "#FFFF00", "#0000FF", "#00FF00", "#00FFFF", "#FF0000", "#FF00FF"];
@@ -62,7 +62,7 @@ var DataPlotter = function () {
         this.datasets = datasets;
 
         for (let i = 0; i < datasets[0].data.length; i++)
-            this.labels[i] = time_per_sample_ms * i;
+            this.labels[i] = (time_per_sample_us * i).toFixed(0);
     }
 
     function GraphConfig(title, graphData) {
@@ -101,7 +101,7 @@ var DataPlotter = function () {
     function adCallback(i, value) {
         var labels = [];
         for (let n = 0; n < value.length; n++)
-            labels[n] = time_per_sample_ms * n;
+            labels[n] = (time_per_sample_us * n).toFixed(0);
         charts[i].data.datasets[0].data = value;
         charts[i].data.labels = labels;
         charts[i].update();
@@ -143,7 +143,7 @@ var DataPlotter = function () {
         charts[8].data.datasets = datasets;
         var labels = [];
         for (let n = 0; n < value.length; n++)
-            labels[n] = time_per_sample_ms * n;
+            labels[n] = (time_per_sample_us * n).toFixed(0);
         charts[8].data.labels = labels;
         charts[8].update();
     }
@@ -160,6 +160,7 @@ var DataPlotter = function () {
         ui.btnSetSampleFreq.click(function () {
             sample_freq = Number(ui.inpSampleFreq.val());
             WsClient.publishVariable("sampleFreq", sample_freq);
+            time_per_sample_us = 1000000/sample_freq;
         });
         ui.btnTogglePoints.click(function () {
             show_points = !show_points;

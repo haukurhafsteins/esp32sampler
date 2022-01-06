@@ -36,7 +36,6 @@ extern "C"
 #endif
     bool i2sadc_post_sample_request(event_receiver_t *receiver, uint32_t sample_time_us);
     bool i2sadc_post_set_sample_frequency(event_receiver_t *receiver, uint32_t sample_freq);
-    void i2s_free_samples(i2sadc_samples_t *adc_samples);
 #ifdef __cplusplus
 }
 #endif

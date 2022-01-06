@@ -11,7 +11,7 @@
 #include "i2sadc.h"
 #include "time_manager.h"
 
-#define SAMPLE_RATE (25000)
+#define SAMPLE_RATE (50000)
 #define I2S_NUM (0)
 #define CHANNEL_NUM (8)
 #define DMA_BUFCNT (2)
@@ -36,7 +36,7 @@ typedef enum
     sampling_state_sampling
 } sampling_state_t;
 
-static QueueHandle_t s_i2s_event_queue;
+static QueueHandle_t i2s_event_queue;
 static const char *TAG = "I2S";
 static uint32_t sample_rate = SAMPLE_RATE;
 static esp_event_base_t I2SADC_BASE = "I2SADC_BASE";
@@ -44,14 +44,13 @@ static esp_event_loop_handle_t loop_handle;
 static sampling_state_t sampling_state = sampling_state_idle;
 static int64_t start_time;
 static request_scan_t request_scan;
-static size_t requested_samples = 500;
+static size_t requested_samples;
 static size_t sample_counter;
 static size_t total_bytes_read;
 static uint16_t i2s_read_buff[1024];
 static i2sadc_samples_t *adc_samples;
 static size_t adc_sample_size;
 static TaskHandle_t i2s_scanner_task_handle;
-static uint32_t task_wait_time = 5;
 
 static size_t get_nr_samples(uint32_t sample_time_us)
 {
@@ -69,18 +68,21 @@ void i2s_adc_init()
     i2s_config_t i2s_config = {
         .mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
         .sample_rate = sample_rate,
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT, // 16bit to get 2*dma_buf_len.
         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
-        .dma_buf_count = DMA_BUFCNT, // dma_desc_num
-        .dma_buf_len = DMA_BUFSIZE,  // dma_frame_num
-        .use_apll = 1,
-        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1
+        .dma_buf_count = DMA_BUFCNT, // dma_desc_num. Min 2, Max 128.
+        .dma_buf_len = DMA_BUFSIZE,  // dma_frame_num. Min 8, Max 1024. Size * 2, in i2s.c
+        .use_apll = true,           // Can't be used with internal ADC.
+        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+        .fixed_mclk = 0 // fi2s_clk can be set manually, but i2s calculations will screw it anyway.
     };
 
-    i2s_driver_install(I2S_NUM, &i2s_config, 2, &s_i2s_event_queue);
+    i2s_driver_install(I2S_NUM, &i2s_config, 2, &i2s_event_queue);
     i2s_set_adc_mode(I2S_NUM, ADC1_CHANNEL_0);
     i2s_adc_enable(I2S_NUM);
+
+    // delay for I2S bug workaround
     vTaskDelay(pdMS_TO_TICKS(5000));
 
     // This 32 bit register has 4 bytes for the first set of channels to scan.
@@ -96,8 +98,6 @@ void i2s_adc_init()
 
     // The raw ADC data is written to DMA in inverted form. Invert back.
     SET_PERI_REG_MASK(SYSCON_SARADC_CTRL2_REG, SYSCON_SARADC_SAR1_INV);
-
-
 }
 
 static void i2s_set_sample_freq(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -107,10 +107,16 @@ static void i2s_set_sample_freq(void *arg, esp_event_base_t event_base, int32_t 
     ESP_ERROR_CHECK(i2s_set_sample_rates(I2S_NUM, sample_rate));
 }
 
+static void i2s_clear_adc()
+{
+    size_t bytes_read = 0;
+    ESP_ERROR_CHECK(i2s_read(I2S_NUM, (void *)i2s_read_buff, sizeof(i2s_read_buff), &bytes_read, (TickType_t)0));
+}
+
 static void i2s_read_adc()
 {
     size_t bytes_read = 0;
-    ESP_ERROR_CHECK(i2s_read(I2S_NUM, (void *)i2s_read_buff, sizeof(i2s_read_buff), &bytes_read, portMAX_DELAY));
+    ESP_ERROR_CHECK(i2s_read(I2S_NUM, (void *)i2s_read_buff, sizeof(i2s_read_buff), &bytes_read, (TickType_t)0));
     for (int i = 0; i < bytes_read / 2; i++)
     {
         if (sample_counter + i / CHANNEL_NUM >= requested_samples)
@@ -129,9 +135,9 @@ static void i2s_read_adc()
 
     ESP_LOGW(TAG, "i2s_scan: end, time=%lldus, total 8ch samples=%d", end, adc_samples->nr_samples);
 
-    esp_event_post_to(request_scan.receiver.evloop, request_scan.receiver.base, request_scan.receiver.id, (void *)adc_samples, adc_sample_size, (TickType_t)0);
+    ESP_ERROR_CHECK(esp_event_post_to(request_scan.receiver.evloop, request_scan.receiver.base, request_scan.receiver.id, (void *)adc_samples, adc_sample_size, (TickType_t)0));
 
-    i2s_free_samples(adc_samples);
+    free(adc_samples);
     adc_samples = NULL;
     sampling_state = sampling_state_idle;
 }
@@ -140,20 +146,27 @@ static void i2s_scanner(void *arg)
 {
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(task_wait_time));
-
-        if (sampling_state == sampling_state_idle)
+        // vTaskDelay(pdMS_TO_TICKS(1));
+        system_event_t evt;
+        if (xQueueReceive(i2s_event_queue, &evt, portMAX_DELAY) == pdPASS)
         {
-            size_t bytes_read = 0;
-            ESP_ERROR_CHECK(i2s_read(I2S_NUM, (void *)i2s_read_buff, sizeof(i2s_read_buff), &bytes_read, portMAX_DELAY));
-            continue;
-        }
-        else if (sampling_state == sampling_state_preparing)
-        {
-            sample_counter = 0;
-            total_bytes_read = 0;
-            sampling_state = sampling_state_sampling;
-            start_time = esp_timer_get_time();
+            if (evt.event_id == 2)
+            {
+                if (sampling_state == sampling_state_idle)
+                {
+                    i2s_clear_adc();
+                    continue;
+                }
+                else if (sampling_state == sampling_state_preparing)
+                {
+                    sample_counter = 0;
+                    total_bytes_read = 0;
+                    sampling_state = sampling_state_sampling;
+                    start_time = esp_timer_get_time();
+                }
+            }
+            else
+                ESP_LOGE(TAG, "DMA Error %d", evt.event_id);
         }
         i2s_read_adc();
     }
@@ -193,12 +206,6 @@ bool i2sadc_post_set_sample_frequency(event_receiver_t *receiver, uint32_t new_s
 {
     request_set_sample_freq_t ev_data = {*receiver, new_sample_freq};
     return (ESP_OK == esp_event_post_to(loop_handle, I2SADC_BASE, I2SADC_SET_SAMPLE_FREQ, (void *)&ev_data, sizeof(ev_data), portMAX_DELAY));
-}
-
-void i2s_free_samples(i2sadc_samples_t *adc_samples)
-{
-    free(adc_samples);
-    adc_samples = NULL;
 }
 
 void i2s_setup_eventloop()
