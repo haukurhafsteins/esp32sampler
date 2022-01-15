@@ -24,21 +24,10 @@ static httpd_handle_t server = NULL;
 esp_err_t get_handler(httpd_req_t *req)
 {
     char buf[128];
-    // httpd_resp_send_chunk(req, "<html><head</head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", HTTPD_RESP_USE_STRLEN);
     snprintf(buf, 128, "# HELP adc_%d AD value for ADC converter %d\n", 0, 0);
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
     snprintf(buf, 128, "# TYPE adc_%d gauge\n", 0);
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-    /*
-    i2sadc_channel_t* channel = &channels.channel[0];
-    int64_t timestamp = timestamp_ms();
-    int i;
-    for (i=0;i<10;i++) {
-        snprintf(buf, 128, "adc_%d %d %lld\n", 0, channel->data[i], timestamp+i);
-        httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    }*/
-    // httpd_resp_send_chunk(req, "</pre></body></html>", HTTPD_RESP_USE_STRLEN);
     httpd_resp_send_chunk(req, buf, 0);
 
     ESP_LOGI(TAG, "GET finished");
@@ -85,7 +74,6 @@ static esp_err_t ws_handler(httpd_req_t *req)
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
     ws_pkt.payload = buf;
     ESP_ERROR_CHECK(httpd_ws_recv_frame(req, &ws_pkt, 256));
-    //ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
     router_post_ws(req->handle, httpd_req_to_sockfd(req), (const char *)ws_pkt.payload, ws_pkt.len + 1);
     free(buf);
     return ESP_OK;
