@@ -10,6 +10,7 @@
 ![image](https://user-images.githubusercontent.com/8937068/149617393-996aee96-2b04-4ed6-9995-2302ae7776a3.png)
 
 ## Project Status
+### Register settings
 The register settings are not set right for all sampling frequencies to work. This leads to drop in samples, mostly on channel 6 and 7 (well visible on the 
 image above) and the sample frequency only working for a certain range, starts around 21500Hz up to 35000Hz. Using the following register settings (for 1000000Hz) work well
 (these settings are taken from this thread: https://github.com/espressif/esp-idf/pull/1991).
@@ -31,7 +32,12 @@ image above) and the sample frequency only working for a certain range, starts a
     I2S0.clkm_conf.clkm_div_a = 1;
     I2S0.sample_rate_conf.rx_bck_div_num = 2;
 
+### Max nr samples
 You can sample around 2200 samples max. Could probably go higher with some memory adjustments.
+
+### Number of channels
+Currently 8 channels are sampled but only 6 are shown. Channel 1 and 2 are of no use as they pins are not available. This also needs to be changed for 
+the SYSCON_SARADC_SAR1_PATT_TAB1_REG and SYSCON_SARADC_SAR1_PATT_TAB2_REG registers.
 
 ## How to Use esp32sampler
 See Example Output below.
