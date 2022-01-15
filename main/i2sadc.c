@@ -11,7 +11,7 @@
 #include "i2sadc.h"
 #include "time_manager.h"
 
-#define SAMPLE_RATE (50000)
+#define SAMPLE_RATE (25000)
 #define I2S_NUM (0)
 #define CHANNEL_NUM (8)
 #define DMA_BUFCNT (2)
@@ -212,7 +212,7 @@ void i2s_setup_eventloop()
 {
     ESP_EVENT_DECLARE_BASE(I2SADC_BASE);
     esp_event_loop_args_t loop_args = {
-        .queue_size = 10,
+        .queue_size = 2,
         .task_name = "i2s_scanner_task",
         .task_priority = 0,
         .task_stack_size = 2048 * 2,
