@@ -8,7 +8,8 @@
 * Data is displayed as graphs on the page.
 
 ## Project Status
-Currently not working properly. The data received is corrupt.
+Works OK except for a few dropped samples that appear now and then, mostly on channel 6 and 7. 
+That is probably due to wrong register settings.
 
 ## How to Use esp32sampler
 
