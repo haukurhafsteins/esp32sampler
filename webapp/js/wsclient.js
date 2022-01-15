@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Map any element with a given ID to a memory in Pluto
+// Map any element with a given ID to a memory.
 //-----------------------------------------------------------------------------
 var WsClient = function () {
     var ui = {};
