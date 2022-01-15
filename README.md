@@ -7,11 +7,34 @@
 * Samples data from 8 channels.
 * Data is displayed as graphs on the page.
 
+![image](https://user-images.githubusercontent.com/8937068/149617393-996aee96-2b04-4ed6-9995-2302ae7776a3.png)
+
 ## Project Status
-Works OK except for a few dropped samples that appear now and then, mostly on channel 6 and 7. 
-That is probably due to wrong register settings.
+The register settings are not set right for all sampling frequencies to work. This leads to drop in samples, mostly on channel 6 and 7 (well visible on the 
+image above) and the sample frequency only working for a certain range, starts around 21500Hz up to 35000Hz. Using the following register settings (for 1000000Hz) work well
+(these settings are taken from this thread: https://github.com/espressif/esp-idf/pull/1991).
+
+    // ***IMPORTANT*** enable continuous adc sampling
+    SYSCON.saradc_ctrl2.meas_num_limit = 0;
+
+    // ADC setting
+    SYSCON.saradc_sar1_patt_tab[0] = ((ADC1_CHANNEL_0 << 4) | (ADC_WIDTH_BIT_12 << 2) | ADC_ATTEN_DB_11) << 24;
+    SYSCON.saradc_ctrl.sar1_patt_len = 0;
+
+    // reduce sample time for 2Msps
+    SYSCON.saradc_ctrl.sar_clk_div = 2;
+    SYSCON.saradc_fsm.sample_cycle = 2;
+
+    // sampling rate 2Msps setting
+    I2S0.clkm_conf.clkm_div_num = 20;
+    I2S0.clkm_conf.clkm_div_b = 0;
+    I2S0.clkm_conf.clkm_div_a = 1;
+    I2S0.sample_rate_conf.rx_bck_div_num = 2;
+
+You can sample around 2200 samples max. Could probably go higher with some memory adjustments.
 
 ## How to Use esp32sampler
+See Example Output below.
 
 ### Hardware Required
 
@@ -49,13 +72,11 @@ Build the project and flash it to the board, then run monitor tool to view seria
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
-
 ## Example Output
 1. Open webapp.html in browser
-2. Press "Set IP" and put in the IP like this: "<ipaddress of development board>:80/ws"
-3. Press button "Sample Frequency (Hz)".
-4. Press button "Sample Time (us)".
+2. Press "Set IP" and put in the IP like this: "xxx.xxx.xxx.xxx:80/ws"
+3. Adjust sample frequency and press button "Sample Frequency (Hz)".
+4. Adjust sample time and press button "Sample Time (us)".
 5. Press button "Request Data"
 
 You should see some data from all 8 channels on the page.
