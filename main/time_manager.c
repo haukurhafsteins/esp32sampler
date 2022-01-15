@@ -9,16 +9,6 @@ static int64_t usUnixStarttime;
 
 static const char *TAG = "Time Manager";
 
-/*
-int main(void)
-{
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    char buff[100];
-    strftime(buff, sizeof buff, "%D %T", gmtime(&ts.tv_sec));
-    printf("Current time: %s.%09ld UTC\n", buff, ts.tv_nsec);
-}
-*/
 void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
