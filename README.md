@@ -14,6 +14,7 @@
 The register settings are not set right for all sampling frequencies to work. This leads to drop in samples, mostly on channel 6 and 7 (well visible on the 
 image above) and the sample frequency only working for a certain range, starts around 21500Hz up to 35000Hz. Using the following register settings (for 1000000Hz) work well
 (these settings are taken from this thread: https://github.com/espressif/esp-idf/pull/1991).
+What needs to be done is to stop using internal calculations for the registers (dpll = true) and instead do them manually.
 
     // ***IMPORTANT*** enable continuous adc sampling
     SYSCON.saradc_ctrl2.meas_num_limit = 0;
